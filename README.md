@@ -23,3 +23,5 @@ I originally tried to implement this using `std::thread` by spawning a thread to
 #### problems
 N can't be very large. I don't know why, but when I increase N to something at or above the 100000 range, it just overflows. It doesn't report a stack overflow though, it just freezes everything until the OS tells it to stop.  I tried manually increasing the stack size (hence the compiler flags), but it didn't help that much.
 
+### TODO
+Time comparison
