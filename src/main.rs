@@ -7,6 +7,7 @@
  *   NOTE: rust should be configured with unstable features enabled
  *   I had to reinstall rust using rustup
  *   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+ * Git        : https://github.com/ColeW-Picaro/rustsort
  */
 
 #![feature(is_sorted)]
@@ -133,13 +134,13 @@ fn main() {
     // run std::sort
     let std_sort_start = SystemTime::now();
     v.sort();
-    println!("std::vec::Vec::sort : {:?}", std_sort_start.elapsed());
+    println!("slice::sort : {:?}", std_sort_start.elapsed());
     assert!(v.is_sorted());
 
     // run partition_at_index sort 
     let pai_sort_start = SystemTime::now();
     quicksort_pai (&mut v_pai, 0, n - 1);
-    println!("std::vec::Vec::partition_at_index partition quicksort : {:?}",
+    println!("slice::partition_at_index partition quicksort : {:?}",
 	     pai_sort_start.elapsed());
     assert!(v_pai.is_sorted());
 
