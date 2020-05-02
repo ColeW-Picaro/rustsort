@@ -55,7 +55,7 @@ fn quicksort_parallel (v: &mut [isize], cutoff: usize, depth: usize, level: usiz
 	v.sort();
 	return;
     } else if depth == level {
-	v.sort();
+	quicksort (v, cutoff);
 	return;
     } else {
 	// Partition
