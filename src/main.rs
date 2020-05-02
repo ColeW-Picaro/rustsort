@@ -28,16 +28,68 @@ use rand::Rng;
  * Returns the index of the pivot
  */
 fn partition (v: &mut [isize]) -> usize {
-    let pivot = v.len () - 1;
+    let pivot = v.len() - 1;
     let mut i = 0;
     for j in 0..pivot {
 	if v[j] < v[pivot] {
-	    v.swap (i, j);
+	    v.swap(i, j);
 	    i += 1;
 	}
     }
-    v.swap (i, pivot);
+    v.swap(i, pivot);
     return i as usize;    
+}
+
+/*
+ * A 3-way partition on v
+ */
+fn partition3(v: &mut [isize]) ->(usize, usize) {
+    let pivot = v.len() - 1;
+    let mut lo = 0;
+    let mut hi = pivot;
+    let mut eq = lo;
+    while eq != hi {
+	if v[eq] < v[pivot] {
+	    v.swap(lo, eq);
+	    lo += 1;
+	    eq += 1;
+	} else if v[eq] > v[pivot] {
+	    hi -= 1;
+	    v.swap(eq, hi);	    
+	} else {
+	    eq += 1;
+	}
+    }
+    v.swap(eq, pivot);
+    return (lo, hi);
+}
+
+/* 
+ * A parallel version of quicksort using rayon::join
+ * v: the elements to be sorted
+ * cutoff: the number of elements to switch to slice::sort
+ * depth: the maximum depth 
+ * level: the current depth
+ */
+fn quicksort_parallel(v: &mut [isize], cutoff: usize, depth: usize, level: usize) {
+    if v.len() <= 1 {
+	return;
+    } else if v.len() <= cutoff {
+	v.sort();
+	return;
+    } else if depth == level {
+	quicksort(v, cutoff);
+	return;
+    } else {
+	// Partition
+	let pivot = partition(v);
+	let (left, right) = v.split_at_mut(pivot);
+	// Spawn new threads 
+	rayon::join(
+	    || quicksort_parallel(left, cutoff, depth, level + 1),
+	    || quicksort_parallel(&mut right[1..], cutoff, depth, level + 1)
+	);
+    }
 }
 
 
@@ -48,23 +100,23 @@ fn partition (v: &mut [isize]) -> usize {
  * depth: the maximum depth 
  * level: the current depth
  */
-fn quicksort_parallel (v: &mut [isize], cutoff: usize, depth: usize, level: usize) {
+fn quicksort3_parallel(v: &mut [isize], cutoff: usize, depth: usize, level: usize) {
     if v.len() <= 1 {
 	return;
     } else if v.len() <= cutoff {
 	v.sort();
 	return;
     } else if depth == level {
-	quicksort (v, cutoff);
+	quicksort(v, cutoff);
 	return;
     } else {
 	// Partition
-	let pivot = partition (v);
-	let (left, right) = v.split_at_mut (pivot);
+	let (lo, hi) = partition3(v);
+	let (left, right) = v.split_at_mut(lo);
 	// Spawn new threads 
-	rayon::join (
-	    || quicksort_parallel (left, cutoff, depth, level + 1),
-	    || quicksort_parallel (&mut right[1..], cutoff, depth, level + 1)
+	rayon::join(
+	    || quicksort3_parallel(left, cutoff, depth, level + 1),
+	    || quicksort3_parallel(&mut right[(hi - lo)..], cutoff, depth, level + 1)
 	);
     }
 }
@@ -74,20 +126,42 @@ fn quicksort_parallel (v: &mut [isize], cutoff: usize, depth: usize, level: usiz
  * v: the slice to be sorted
  * cutoff: the number of elemetns to switch to slice::sort
  */
-fn quicksort (v: &mut [isize], cutoff: usize) {
-    if v.len () <= 1 {
+fn quicksort(v: &mut [isize], cutoff: usize) {
+    if v.len() <= 1 {
 	return;	
-    } else if v.len () <= cutoff {
+    } else if v.len() <= cutoff {
 	// Vec::sort does an insertion sort at N == 100
 	v.sort();
 	return;
     } else {
 	// Partition
-	let pivot = partition (v);
+	let pivot = partition(v);
 	let (left, right) = v.split_at_mut(pivot);
 	// Recurse
-	quicksort (left, cutoff);
-	quicksort (&mut right[1..], cutoff);
+	quicksort(left, cutoff);
+	quicksort(&mut right[1..], cutoff);
+    }
+}
+
+/* 
+ * Quicksort using a handwritten partition
+ * v: the slice to be sorted
+ * cutoff: the number of elemetns to switch to slice::sort
+ */
+fn quicksort3(v: &mut [isize], cutoff: usize) {
+    if v.len() <= 1 {
+	return;	
+    } else if v.len() <= cutoff {
+	// Vec::sort does an insertion sort at N == 100
+	v.sort();
+	return;
+    } else {
+	// Partition
+	let (lo, hi) = partition3(v);
+	let (left, right) = v.split_at_mut(lo);
+	// Recurse
+	quicksort3(left, cutoff);
+	quicksort3(&mut right[(hi - lo)..], cutoff);
     }
 }
 
@@ -96,7 +170,7 @@ fn quicksort (v: &mut [isize], cutoff: usize) {
 // the position of the pivot
 // I was ambitious to use partition_at_index in hopes it would behave as std::partition
 // But it's more similar to std::nth_element
-fn quicksort_pai (v: &mut [isize], low: usize, high: usize) {
+fn quicksort_pai(v: &mut [isize], low: usize, high: usize) {
     if high <= low {
 	return;	
     } else if high - low <= 100 {
@@ -110,14 +184,14 @@ fn quicksort_pai (v: &mut [isize], low: usize, high: usize) {
 	let left_vec = left.to_vec();
 	let p = left_vec.len();
 	// Recurse
-	quicksort_pai (v, low, p - 1);
-	quicksort_pai (v, p + 1, high); 
+	quicksort_pai(v, low, p - 1);
+	quicksort_pai(v, p + 1, high); 
     }
 }
 
 fn main() {
     // N, depth, and cutoff
-    let n = 50000;
+    let n = 100000;
     let depth = 4;
     let cutoff = 100;
 
@@ -125,12 +199,14 @@ fn main() {
     let mut eng = rand::thread_rng();
     let mut v = vec![];
     for _i in 0..n {
-	v.push (eng.gen_range (0, 1000));
+	v.push(eng.gen_range(0, 1000));
     }
-    let mut v_serial = v.to_vec ();
-    let mut v_pai = v.to_vec ();
+    let mut v_serial = v.to_vec();
+    let mut v_pai = v.to_vec();
     let mut v_parallel = v.to_vec();
-
+    let mut v_serial3 = v.to_vec();
+    let mut v_parallel3 = v.to_vec();
+    
     // run std::sort
     let std_sort_start = SystemTime::now();
     v.sort();
@@ -139,21 +215,32 @@ fn main() {
 
     // run partition_at_index sort 
     let pai_sort_start = SystemTime::now();
-    quicksort_pai (&mut v_pai, 0, n - 1);
+    quicksort_pai(&mut v_pai, 0, n - 1);
     println!("slice::partition_at_index partition quicksort : {:?}",
 	     pai_sort_start.elapsed());
     assert!(v_pai.is_sorted());
 
     // run handwritten partition quicksort
     let serial_sort_start = SystemTime::now();
-    quicksort (&mut v_serial, cutoff);
+    quicksort(&mut v_serial, cutoff);
     println!("handwritten partition quicksort : {:?}", serial_sort_start.elapsed());
     assert!(v_serial.is_sorted());
 
+    // run partition3 quicksort
+    let quicksort3_start = SystemTime::now();
+    quicksort3(&mut v_serial3, cutoff);
+    println!("partition3 quicksort: : {:?}", quicksort3_start.elapsed());
+    assert!(v_serial3.is_sorted());
+
     // run parallel quicksort
     let parallel_sort_start = SystemTime::now();
-    quicksort_parallel (&mut v_parallel, cutoff, depth, 0);
+    quicksort_parallel(&mut v_parallel, cutoff, depth, 0);
     println!("parallel quicksort : {:?}", parallel_sort_start.elapsed());
     assert!(v_parallel.is_sorted());
-    
+
+    // run parallel3 quicksort
+    let parallel3_sort_start = SystemTime::now();
+    quicksort3_parallel(&mut v_parallel3, cutoff, depth, 0);
+    println!("parallel quicksort3 : {:?}", parallel3_sort_start.elapsed());
+    assert!(v_parallel3.is_sorted());    
 }
