@@ -15,8 +15,11 @@
 
 extern crate rand;
 extern crate rayon;
+#[macro_use]
+extern crate text_io;
 
 use std::time::SystemTime;
+use std::io;
 
 use rand::Rng;
 
@@ -165,44 +168,25 @@ fn quicksort3(v: &mut [isize], cutoff: usize) {
     }
 }
 
-// Quicksort using Vec::partition_at_index on a vec slice
-// Slower because the return value needs to be turned into a vec to get
-// the position of the pivot
-// I was ambitious to use partition_at_index in hopes it would behave as std::partition
-// But it's more similar to std::nth_element
-fn quicksort_pai(v: &mut [isize], low: usize, high: usize) {
-    if high <= low {
-	return;	
-    } else if high - low <= 100 {
-	// Vec::sort does an insertion sort at N == 100
-	v.sort();
-	return;
-    } else {
-	// Partition
-	 let (left, _pivot, _right) = v[low..high].partition_at_index(high - 1);
-	// Find index of pivot
-	let left_vec = left.to_vec();
-	let p = left_vec.len();
-	// Recurse
-	quicksort_pai(v, low, p - 1);
-	quicksort_pai(v, p + 1, high); 
-    }
-}
-
 fn main() {
     // N, depth, and cutoff
-    let n = 100000;
-    let depth = 4;
-    let cutoff = 100;
+    print!("N      ==>");
+    io::Write::flush(&mut io::stdout()).unwrap();
+    let n: usize = read!();
+    print!("depth  ==>");
+    io::Write::flush(&mut io::stdout()).unwrap();
+    let depth: usize = read!();
+    print!("cutoff ==>");
+    io::Write::flush(&mut io::stdout()).unwrap();
+    let cutoff: usize = read!();
 
     // Create the vector with random numbers [0, 1000)
     let mut eng = rand::thread_rng();
     let mut v = vec![];
     for _i in 0..n {
-	v.push(eng.gen_range(0, 1000));
+	v.push(eng.gen_range(0, 100000));	
     }
     let mut v_serial = v.to_vec();
-    let mut v_pai = v.to_vec();
     let mut v_parallel = v.to_vec();
     let mut v_serial3 = v.to_vec();
     let mut v_parallel3 = v.to_vec();
@@ -212,13 +196,6 @@ fn main() {
     v.sort();
     println!("slice::sort : {:?}", std_sort_start.elapsed());
     assert!(v.is_sorted());
-
-    // run partition_at_index sort 
-    let pai_sort_start = SystemTime::now();
-    quicksort_pai(&mut v_pai, 0, n - 1);
-    println!("slice::partition_at_index partition quicksort : {:?}",
-	     pai_sort_start.elapsed());
-    assert!(v_pai.is_sorted());
 
     // run handwritten partition quicksort
     let serial_sort_start = SystemTime::now();
