@@ -15,8 +15,7 @@
 
 extern crate rand;
 extern crate rayon;
-#[macro_use]
-extern crate text_io;
+#[macro_use] extern crate text_io;
 
 use std::time::SystemTime;
 use std::io;
@@ -46,7 +45,7 @@ fn partition (v: &mut [isize]) -> usize {
 /*
  * A 3-way partition on v
  */
-fn partition3(v: &mut [isize]) ->(usize, usize) {
+fn partition3(v: &mut [isize]) -> (usize, usize) {
     let pivot = v.len() - 1;
     let mut lo = 0;
     let mut hi = pivot;
@@ -170,21 +169,24 @@ fn quicksort3(v: &mut [isize], cutoff: usize) {
 
 fn main() {
     // N, depth, and cutoff
-    print!("N      ==>");
+    print!("N      ==> ");
     io::Write::flush(&mut io::stdout()).unwrap();
     let n: usize = read!();
-    print!("depth  ==>");
+    print!("depth  ==> ");
     io::Write::flush(&mut io::stdout()).unwrap();
     let depth: usize = read!();
-    print!("cutoff ==>");
+    print!("cutoff ==> ");
     io::Write::flush(&mut io::stdout()).unwrap();
     let cutoff: usize = read!();
-
-    // Create the vector with random numbers [0, 1000)
+    print!("range  ==> ");
+    io::Write::flush(&mut io::stdout()).unwrap();
+    let range: isize = read!();
+    
+    // Create the vector with random numbers [0, 100000)
     let mut eng = rand::thread_rng();
     let mut v = vec![];
     for _i in 0..n {
-	v.push(eng.gen_range(0, 100000));	
+	v.push(eng.gen_range(0, range));	
     }
     let mut v_serial = v.to_vec();
     let mut v_parallel = v.to_vec();
@@ -194,30 +196,30 @@ fn main() {
     // run std::sort
     let std_sort_start = SystemTime::now();
     v.sort();
-    println!("slice::sort : {:?}", std_sort_start.elapsed());
+    println!("slice::sort           : {:?}", std_sort_start.elapsed());
     assert!(v.is_sorted());
 
     // run handwritten partition quicksort
     let serial_sort_start = SystemTime::now();
-    quicksort(&mut v_serial, cutoff);
-    println!("handwritten partition quicksort : {:?}", serial_sort_start.elapsed());
+    quicksort(&mut v_serial[..], cutoff);
+    println!("serial quicksort      : {:?}", serial_sort_start.elapsed());
     assert!(v_serial.is_sorted());
 
     // run partition3 quicksort
     let quicksort3_start = SystemTime::now();
-    quicksort3(&mut v_serial3, cutoff);
-    println!("partition3 quicksort: : {:?}", quicksort3_start.elapsed());
+    quicksort3(&mut v_serial3[..], cutoff);
+    println!("partition3 quicksort  : {:?}", quicksort3_start.elapsed());
     assert!(v_serial3.is_sorted());
 
     // run parallel quicksort
     let parallel_sort_start = SystemTime::now();
-    quicksort_parallel(&mut v_parallel, cutoff, depth, 0);
-    println!("parallel quicksort : {:?}", parallel_sort_start.elapsed());
+    quicksort_parallel(&mut v_parallel[..], cutoff, depth, 0);
+    println!("parallel quicksort    : {:?}", parallel_sort_start.elapsed());
     assert!(v_parallel.is_sorted());
 
     // run parallel3 quicksort
     let parallel3_sort_start = SystemTime::now();
-    quicksort3_parallel(&mut v_parallel3, cutoff, depth, 0);
-    println!("parallel quicksort3 : {:?}", parallel3_sort_start.elapsed());
+    quicksort3_parallel(&mut v_parallel3[..], cutoff, depth, 0);
+    println!("parallel quicksort3   : {:?}", parallel3_sort_start.elapsed());
     assert!(v_parallel3.is_sorted());    
 }
